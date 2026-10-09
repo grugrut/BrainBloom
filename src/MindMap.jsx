@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import MindElixir from 'mind-elixir';
 import "mind-elixir/style";
+import { ja } from "mind-elixir/i18n";
 import { listen } from '@tauri-apps/api/event';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
@@ -16,12 +17,10 @@ export default function MindMap() {
 	const instance = new MindElixir({
 	    el: "#map",
 	    direction: MindElixir.RIGHT,
-	    draggable: true,
-	    contextMenu: true,
-	    toolbar: true,
-	    nodeMenu: true,
+	    editable: true,
+	    contextMenu: { locale: ja },
+	    toolBar: true,
 	    keypress: true,
-	    locale: "ja",
 	});
 	instance.init(MindElixir.new('root'));
 	mindRef.current = instance;
