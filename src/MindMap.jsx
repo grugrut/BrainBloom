@@ -25,19 +25,6 @@ export default function MindMap() {
 	});
 	instance.init(MindElixir.new('root'));
 	mindRef.current = instance;
-
-	const handleResize = () => {
-	    if (mindRef.current) {
-		mindRef.current.resize();
-	    }
-	};
-	window.addEventListener("resize", handleResize);
-	setTimeout(handleResize, 100);
-
-	return () => {
-	    window.removeEventListener("resize", handleResize);
-	};
-	
     }, []);
 
     // ダイアログ表示中の再実行(メニューとショートカットの二重発火など)を無視する
