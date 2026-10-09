@@ -1,10 +1,16 @@
 import { useEffect, useRef } from 'react';
 import MindElixir from 'mind-elixir';
 import "mind-elixir/style";
+import { listen } from '@tauri-apps/api/event';
+import { open, save } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+
+const FILE_FILTERS = [{ name: "MindMap Files", extensions: ["mbloom"] }];
 
 export default function MindMap() {
     const containerRef = useRef(null);
     const mindRef= useRef(null);
+    const handlersRef = useRef({});
 
     useEffect(() => {
 	const instance = new MindElixir({
@@ -34,31 +40,37 @@ export default function MindMap() {
 	
     }, []);
 
-    useEffect(() => {
-	if (window.electronAPI) {
-	    window.electronAPI.on("menu-save", handleSave);
-	    window.electronAPI.on("menu-open", handleOpen);
-
-	    return () => {
-		window.electronAPI.removeAllListeners?.("menu-save");
-		window.electronAPI.removeAllListeners?.("menu-open");
-	    }
-	} else {
-	    console.warn("electronAPI is not available");
-	}
-    }, []);
-
     const handleSave = async () => {
+	const path = await save({ filters: FILE_FILTERS });
+	if (!path) return;
 	const data = mindRef.current.getData();
-	await window.electronAPI.saveFile(data);
+	await writeTextFile(path, JSON.stringify(data, null, 2));
     };
 
     const handleOpen = async () => {
-	const data = await window.electronAPI.openFile();
-	if (data) {
-	    mindRef.current.refresh(data);
-	}
+	const path = await open({ filters: FILE_FILTERS, multiple: false });
+	if (!path) return;
+	const data = JSON.parse(await readTextFile(path));
+	mindRef.current.refresh(data);
     };
+
+    useEffect(() => {
+	if (!window.__TAURI_INTERNALS__) {
+	    console.warn("Tauri API is not available");
+	    return;
+	}
+
+	// メニューからのイベントは常に最新のハンドラを呼ぶ必要があるため ref 経由にする
+	const unlisteners = [
+	    listen("menu-save", () => handlersRef.current.save()),
+	    listen("menu-open", () => handlersRef.current.open()),
+	];
+	return () => {
+	    unlisteners.forEach((p) => p.then((unlisten) => unlisten()));
+	};
+    }, []);
+
+    handlersRef.current = { save: handleSave, open: handleOpen };
 
     return (
 	<div id="map" style={{ height: "100vh", width: "100%", backgroundColor: "#f3f4f6" }}>

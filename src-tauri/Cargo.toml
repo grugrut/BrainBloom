@@ -1,0 +1,18 @@
+[package]
+name = "brainbloom"
+version = "0.0.0"
+description = "A mind mapping application built with MindElixir, React, Vite, and Tauri."
+authors = ["grugrut"]
+edition = "2021"
+
+[lib]
+name = "brainbloom_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
