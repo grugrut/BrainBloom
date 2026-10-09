@@ -12,6 +12,7 @@ export default function MindMap() {
     const containerRef = useRef(null);
     const mindRef= useRef(null);
     const handlersRef = useRef({});
+    const busyRef = useRef(false);
 
     useEffect(() => {
 	const instance = new MindElixir({
@@ -39,19 +40,47 @@ export default function MindMap() {
 	
     }, []);
 
-    const handleSave = async () => {
+    // ダイアログ表示中の再実行(メニューとショートカットの二重発火など)を無視する
+    const withDialogGuard = (fn) => async () => {
+	if (busyRef.current) return;
+	busyRef.current = true;
+	try {
+	    await fn();
+	} finally {
+	    busyRef.current = false;
+	}
+    };
+
+    const handleSave = withDialogGuard(async () => {
 	const path = await save({ filters: FILE_FILTERS });
 	if (!path) return;
 	const data = mindRef.current.getData();
 	await writeTextFile(path, JSON.stringify(data, null, 2));
-    };
+    });
 
-    const handleOpen = async () => {
+    const handleOpen = withDialogGuard(async () => {
 	const path = await open({ filters: FILE_FILTERS, multiple: false });
 	if (!path) return;
 	const data = JSON.parse(await readTextFile(path));
 	mindRef.current.refresh(data);
-    };
+    });
+
+    // Windows ではメニューのアクセラレータが WebView にフォーカスがあると効かないため JS 側でも処理する
+    useEffect(() => {
+	const onKeyDown = (e) => {
+	    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.isComposing) return;
+	    const key = e.key.toLowerCase();
+	    if (key === "s") {
+		e.preventDefault();
+		handlersRef.current.save();
+	    } else if (key === "o") {
+		e.preventDefault();
+		handlersRef.current.open();
+	    }
+	};
+	window.addEventListener("keydown", onKeyDown);
+	return () => window.removeEventListener("keydown", onKeyDown);
+    }, []);
 
     useEffect(() => {
 	if (!window.__TAURI_INTERNALS__) {
